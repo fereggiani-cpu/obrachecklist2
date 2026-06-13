@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obra — Checklist Diário</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg:        #111214;
+    --surface:   #18191d;
+    --border:    #26272d;
+    --muted:     #3a3b42;
+    --text:      #e8e9ec;
+    --text-dim:  #787a85;
+    --yellow:    #f5c842;
+    --orange:    #f07d3a;
+    --green:     #3fcf6e;
+    --blue:      #4a9eff;
+    --red:       #f04a4a;
+    --purple:    #9b72f7;
+    --pink:      #f472b6;
+    --mono:      'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 2px solid var(--yellow);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-icon { font-size: 1.4rem; }
+  .topbar h1 { font-size: 1rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: var(--yellow); }
+  .topbar p  { font-size: 0.7rem; color: var(--text-dim); font-family: var(--mono); margin-top: 1px; }
+
+  .date-badge {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    text-align: right;
+  }
+  .date-badge span { display: block; color: var(--text); font-weight: 600; font-size: 0.82rem; }
+
+  /* ── TABS (manhã / tarde) ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 14px 20px 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .tab.active { background: var(--bg); border-color: var(--border); color: var(--text); }
+  .tab .tab-icon { margin-right: 6px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── PROGRESS STRIP ── */
+  .progress-strip {
+    display: flex;
+    gap: 10px;
+    padding: 12px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .prog-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    flex: 1;
+    min-width: 110px;
+  }
+  .prog-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .prog-num { font-size: 1.3rem; font-weight: 900; font-family: var(--mono); line-height: 1; }
+  .prog-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 8px;
+    padding: 10px 20px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: var(--text-dim); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* ── MAIN CONTENT ── */
+  .main { padding: 16px 20px 60px; }
+
+  /* ── AMBIENTE CARD ── */
+  .ambiente {
+    margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .amb-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.15s;
+  }
+  .amb-header:hover { filter: brightness(1.1); }
+
+  .amb-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .amb-name { font-weight: 800; font-size: 0.9rem; letter-spacing: 0.5px; text-transform: uppercase; flex: 1; }
+  .amb-badge {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.08);
+    font-weight: 600;
+  }
+  .amb-chevron { font-size: 0.65rem; color: var(--text-dim); transition: transform 0.3s; }
+  .amb-header.open .amb-chevron { transform: rotate(180deg); }
+
+  /* Ambiente colors */
+  .c-lavanderia { background: linear-gradient(90deg,#1a1330,#18191d); border-left: 4px solid var(--purple); }
+  .c-cozinha    { background: linear-gradient(90deg,#1f1608,#18191d); border-left: 4px solid var(--orange); }
+  .c-lavabo     { background: linear-gradient(90deg,#081520,#18191d); border-left: 4px solid var(--blue); }
+  .c-sala       { background: linear-gradient(90deg,#0a1a12,#18191d); border-left: 4px solid var(--green); }
+  .c-suite      { background: linear-gradient(90deg,#1f0808,#18191d); border-left: 4px solid var(--pink); }
+  .c-suite-ban  { background: linear-gradient(90deg,#1a0f18,#18191d); border-left: 4px solid var(--pink); }
+  .c-escritorio { background: linear-gradient(90deg,#10181f,#18191d); border-left: 4px solid var(--blue); }
+  .c-quartinho  { background: linear-gradient(90deg,#181008,#18191d); border-left: 4px solid var(--yellow); }
+  .c-etapas     { background: linear-gradient(90deg,#121212,#18191d); border-left: 4px solid var(--muted); }
+
+  /* ── TASK LIST ── */
+  .task-list { display: none; background: var(--bg); }
+  .task-list.open { display: block; }
+
+  .task-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 10px;
+    padding: 11px 16px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .task-row:hover { background: #1c1d22; }
+
+  .task-left { display: flex; align-items: flex-start; gap: 10px; }
+
+  /* STATUS PILL */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: none;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .s-nao    { background: #2a1a1a; color: var(--red);    border: 1px solid #3d1f1f; }
+  .s-inic   { background: #1a1a2e; color: var(--blue);   border: 1px solid #1f1f3d; }
+  .s-conc   { background: #0a2010; color: var(--green);  border: 1px solid #0f3018; }
+  .s-verif  { background: #1a120a; color: var(--yellow); border: 1px solid #3d2f0a; }
+
+  .task-info { flex: 1; }
+  .task-name { font-size: 0.87rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .task-row.status-conc .task-name { color: var(--text-dim); text-decoration: line-through; }
+
+  .task-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; align-items: center; }
+
+  .team-tag {
+    font-size: 0.62rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-family: var(--mono);
+  }
+  .t-diney    { background: #0d2010; color: #3fcf6e; }
+  .t-romanza  { background: #1a0d20; color: #9b72f7; }
+  .t-joao     { background: #200d0d; color: #f04a4a; }
+  .t-marmore  { background: #0d1520; color: #4a9eff; }
+  .t-nanda    { background: #200d18; color: #f472b6; }
+  .t-gabriel  { background: #1a1208; color: #f5c842; }
+  .t-midea    { background: #081520; color: #4a9eff; }
+  .t-multiglass { background: #0d1a20; color: #4a9eff; }
+  .t-staccato { background: #1a1520; color: #9b72f7; }
+  .t-pique    { background: #1a0820; color: #f472b6; }
+  .t-rene     { background: #201008; color: #f07d3a; }
+
+  .alert-tag {
+    font-size: 0.62rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: #2a1010;
+    color: var(--red);
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  .action-tag {
+    font-size: 0.62rem;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-weight: 600;
+    font-family: var(--mono);
+    border: 1px solid var(--border);
+  }
+
+  /* ── ALERT BANNER ── */
+  .alert-banner {
+    background: #1f0d0d;
+    border: 1px solid #5a1f1f;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 16px 20px 0;
+    display: flex;
+    gap: 10px;
+  }
+  .alert-banner .ab-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .alert-banner h3 { color: var(--red); font-size: 0.8rem; font-weight: 800; margin-bottom: 4px; }
+  .alert-banner p  { color: #cc8888; font-size: 0.75rem; line-height: 1.6; }
+
+  /* ── INSTRUCOES ── */
+  .instrucoes {
+    margin: 12px 20px 0;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .inst-item {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .inst-item strong { color: var(--text); }
+  .inst-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    padding: 14px 20px 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── ETAPAS ── */
+  .etapa-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .etapa-row:hover { background: #1c1d22; }
+  .etapa-num {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+  }
+  .etapa-nome { font-size: 0.85rem; font-weight: 500; flex: 1; color: var(--text); }
+  .etapa-row.status-conc .etapa-nome { color: var(--text-dim); text-decoration: line-through; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-icon">🏗️</span>
+    <div>
+      <h1>Checklist da Obra</h1>
+      <p>Fase final · René vistoria · Gestão diária</p>
+    </div>
+  </div>
+  <div class="date-badge">
+    <span id="hoje"></span>
+    <span id="hora"></span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="trocarTab('manha', this)"><span class="tab-icon">☀️</span>MANHÃ — O que tem que acontecer</div>
+  <div class="tab" onclick="trocarTab('tarde', this)"><span class="tab-icon">🌙</span>FIM DO DIA — O que foi entregue</div>
+</div>
+
+<!-- ═══════════════════ ABA MANHÃ ═══════════════════ -->
+<div class="tab-panel active" id="panel-manha">
+
+  <div class="alert-banner">
+    <span class="ab-icon">🚨</span>
+    <div>
+      <h3>CONFIRMAR HOJE — SEM DATA DEFINIDA</h3>
+      <p>📞 João Batista → portas + vitrais &nbsp;|&nbsp; 📞 Marmoreiro → pia lavabo + soleiras<br>
+         📞 ROMANZA → previsão de entrega + início montagem &nbsp;|&nbsp; 📦 Diney → tanque (data chegada)</p>
+    </div>
+  </div>
+
+  <div class="instrucoes">
+    <div class="inst-item"><span class="inst-icon">👥</span><span><strong>Checar equipes presentes</strong> e confirmar o que cada uma vai fazer hoje</span></div>
+    <div class="inst-item"><span class="inst-icon">📋</span><span><strong>Abrir cada ambiente</strong> e marcar o status do que começa</span></div>
+    <div class="inst-item"><span class="inst-icon">📸</span><span><strong>Fotografar</strong> tudo que tiver problema ou que for começar</span></div>
+    <div class="inst-item"><span class="inst-icon">⚠️</span><span><strong>Qualquer dúvida</strong> ou divergência → avisar imediatamente!</span></div>
+  </div>
+
+  <!-- PROGRESSO -->
+  <div class="progress-strip">
+    <div class="prog-item"><div class="prog-dot" style="background:var(--red)"></div><div><div class="prog-num" id="m-nao" style="color:var(--red)">0</div><div class="prog-label">Não iniciado</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--blue)"></div><div><div class="prog-num" id="m-inic" style="color:var(--blue)">0</div><div class="prog-label">Iniciado</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--green)"></div><div><div class="prog-num" id="m-conc" style="color:var(--green)">0</div><div class="prog-label">Concluído</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--yellow)"></div><div><div class="prog-num" id="m-verif" style="color:var(--yellow)">0</div><div class="prog-label">A verificar</div></div></div>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Não iniciado</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div>Iniciado</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Concluído ✓</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>A verificar (tio/René)</div>
+    <div class="leg" style="margin-left:auto; font-size:0.68rem; color:var(--text-dim)">👆 Clica no status para mudar</div>
+  </div>
+
+  <div class="main" id="main-manha"></div>
+</div>
+
+<!-- ═══════════════════ ABA FIM DO DIA ═══════════════════ -->
+<div class="tab-panel" id="panel-tarde">
+
+  <div class="instrucoes" style="margin-top:14px;">
+    <div class="inst-item"><span class="inst-icon">✅</span><span><strong>Atualizar status</strong> de tudo que foi entregue hoje</span></div>
+    <div class="inst-item"><span class="inst-icon">📸</span><span><strong>Fotos do dia</strong> — registrar avanços e pendências</span></div>
+    <div class="inst-item"><span class="inst-icon">🔍</span><span><strong>Marcar "A verificar"</strong> quando o tio ou René precisam dar ok</span></div>
+    <div class="inst-item"><span class="inst-icon">📞</span><span><strong>Reportar à Fernanda</strong> qualquer item atrasado ou com problema</span></div>
+  </div>
+
+  <div class="progress-strip">
+    <div class="prog-item"><div class="prog-dot" style="background:var(--red)"></div><div><div class="prog-num" id="t-nao" style="color:var(--red)">0</div><div class="prog-label">Não iniciado</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--blue)"></div><div><div class="prog-num" id="t-inic" style="color:var(--blue)">0</div><div class="prog-label">Iniciado</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--green)"></div><div><div class="prog-num" id="t-conc" style="color:var(--green)">0</div><div class="prog-label">Concluído</div></div></div>
+    <div class="prog-item"><div class="prog-dot" style="background:var(--yellow)"></div><div><div class="prog-num" id="t-verif" style="color:var(--yellow)">0</div><div class="prog-label">A verificar</div></div></div>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>Não iniciado</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--blue)"></div>Iniciado</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>Concluído ✓</div>
+    <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>A verificar (tio/René)</div>
+    <div class="leg" style="margin-left:auto; font-size:0.68rem; color:var(--text-dim)">👆 Clica no status para mudar</div>
+  </div>
+
+  <div class="main" id="main-tarde"></div>
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────
+const AMBIENTES = [
+  {
+    id: 'lavanderia', nome: 'Lavanderia', icon: '🧺', cor: 'c-lavanderia',
+    tarefas: [
+      { nome: 'Instalação do tanque', equipe: 'Diney', acao: 'instalar', alerta: '📦 Aguardando entrega — confirmar data!' },
+      { nome: 'Instalação da porta', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+    ]
+  },
+  {
+    id: 'cozinha', nome: 'Cozinha', icon: '🍳', cor: 'c-cozinha',
+    tarefas: [
+      { nome: 'Móvel da pia (desmontagem do antigo)', equipe: 'Rene', acao: 'desmontar' },
+      { nome: 'Móvel da pia (montagem novo)', equipe: 'Romanza', acao: 'montagem', alerta: '⚠️ Só após retirada do antigo' },
+      { nome: 'Móvel do microondas', equipe: 'Romanza', acao: 'montagem' },
+      { nome: 'Porta da cozinha', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      { nome: 'Azulejos (reposição)', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Verificar sobressalentes' },
+      { nome: 'Porta do armário (ajuste trilho)', equipe: 'Rene', acao: 'ajustar' },
+    ]
+  },
+  {
+    id: 'lavabo', nome: 'Lavabo', icon: '🚿', cor: 'c-lavabo',
+    tarefas: [
+      { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      { nome: 'Pia', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Deve ser ANTES da torneira (Diney)' },
+      { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
+      { nome: 'Torneira', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após marmoreiro instalar pia' },
+      { nome: 'Marcenaria / Móvel', equipe: 'Romanza', acao: 'montagem' },
+      { nome: 'Rodapé (1 peça)', equipe: 'Staccato', acao: 'instalar' },
+    ]
+  },
+  {
+    id: 'sala', nome: 'Sala', icon: '🛋️', cor: 'c-sala',
+    tarefas: [
+      { nome: 'Rack TV', equipe: 'Romanza', acao: 'instalar' },
+      { nome: 'Estante sala', equipe: 'Romanza', acao: 'instalar' },
+      { nome: 'Luz — alterar comandos', equipe: 'Diney', acao: 'alterar' },
+      { nome: 'Ar condicionado — retirar do teto', equipe: 'Diney', acao: 'retirar' },
+      { nome: 'Ar condicionado — peça com defeito', equipe: 'Midea', acao: 'arrumar', alerta: '⚠️ Aguardando técnico Midea' },
+      { nome: 'Ar condicionado — reinstalar no teto', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após Midea arrumar a peça' },
+    ]
+  },
+  {
+    id: 'suite', nome: 'Suíte', icon: '🛏️', cor: 'c-suite',
+    tarefas: [
+      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+      { nome: 'Cortina', equipe: 'Nanda', acao: 'comprar' },
+      { nome: 'Caixote do ar condicionado', equipe: 'Gabriel', acao: 'comprar' },
+    ]
+  },
+  {
+    id: 'suite-ban', nome: 'Banheiro Suíte', icon: '🛁', cor: 'c-suite-ban',
+    tarefas: [
+      { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
+      { nome: 'Box', equipe: 'Multiglass', acao: 'instalar', alerta: '🚨 Confirmar data' },
+      { nome: 'Torneira', equipe: 'Diney', acao: 'instalar' },
+      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+      { nome: 'Toalheiro elétrico', equipe: 'Diney', acao: 'instalar' },
+      { nome: 'Soleira', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Confirmar data' },
+    ]
+  },
+  {
+    id: 'escritorio', nome: 'Escritório', icon: '💼', cor: 'c-escritorio',
+    tarefas: [
+      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+      { nome: 'Adesivar móveis', equipe: 'Nanda', acao: 'fechar' },
+      { nome: 'Escrivaninha', equipe: 'Gabriel', acao: 'comprar' },
+      { nome: 'Cadeira', equipe: 'Gabriel', acao: 'comprar' },
+    ]
+  },
+  {
+    id: 'quartinho', nome: 'Quartinho', icon: '📦', cor: 'c-quartinho',
+    tarefas: [
+      { nome: 'Porta do quartinho', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      { nome: 'Estantes', equipe: 'Romanza', acao: 'montagem' },
+    ]
+  },
+  {
+    id: 'banheiro-servico', nome: 'Banheiro Serviço', icon: '🚽', cor: 'c-lavabo',
+    tarefas: [
+      { nome: 'Porta serviço', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
+      { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
+    ]
+  },
+];
+
+const ETAPAS = [
+  { num: '2ª', nome: 'Limpeza pós obra', resp: 'Gabriel', acao: 'cotar e fechar' },
+  { num: '2ª', nome: 'Organizer', resp: 'Nanda', acao: 'cotar e fechar' },
+  { num: '2ª', nome: 'Mudança', resp: 'Gabriel', acao: 'cotar e fechar' },
+  { num: '3ª', nome: 'Adesivos armários', resp: 'Nanda', acao: 'cotar e fechar' },
+  { num: '5ª', nome: 'Adesivos janelas', resp: 'Nanda', acao: 'cotar e fechar' },
+  { num: '6ª', nome: 'Cortinas', resp: 'Nanda', acao: 'cotar e fechar' },
+  { num: '7ª', nome: 'Varal', resp: 'Nanda', acao: 'cotar e fechar' },
+  { num: '8ª', nome: 'Espelho lavabo', resp: 'Pique', acao: 'cotar e fechar' },
+  { num: '9ª', nome: 'Porta toalha', resp: 'Pique', acao: 'cotar e fechar' },
+  { num: '10ª', nome: 'Porta papel higiênico', resp: 'Pique', acao: 'cotar e fechar' },
+  { num: '11ª', nome: 'Lixo cozinha', resp: 'Pique', acao: 'cotar e fechar' },
+  { num: '12ª', nome: 'Lixo banheiros', resp: 'Pique', acao: 'cotar e fechar' },
+  { num: '13ª', nome: 'Enxoval', resp: 'Pique', acao: 'cotar e fechar' },
+];
+
+const EQUIPE_CLASS = {
+  'Diney': 't-diney', 'Romanza': 't-romanza', 'Joao Batista': 't-joao',
+  'Marmore': 't-marmore', 'Nanda': 't-nanda', 'Gabriel': 't-gabriel',
+  'Midea': 't-midea', 'Multiglass': 't-multiglass', 'Staccato': 't-staccato',
+  'Pique': 't-pique', 'Rene': 't-rene'
+};
+
+const STATUS_CYCLE = ['nao', 'inic', 'conc', 'verif'];
+const STATUS_LABEL = { nao: '⬜ Não iniciado', inic: '🔵 Iniciado', conc: '✅ Concluído', verif: '🔍 A verificar' };
+const STATUS_CLASS = { nao: 's-nao', inic: 's-inic', conc: 's-conc', verif: 's-verif' };
+
+// State: tab -> ambId -> tarefaIdx -> status
+const state = {};
+
+function getKey(tab, ambId, idx) { return `${tab}__${ambId}__${idx}`; }
+function getStatus(tab, ambId, idx) { return state[getKey(tab,ambId,idx)] || 'nao'; }
+function cycleStatus(tab, ambId, idx) {
+  const cur = getStatus(tab, ambId, idx);
+  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur)+1) % STATUS_CYCLE.length];
+  state[getKey(tab,ambId,idx)] = next;
+  return next;
+}
+
+function teamTag(equipe) {
+  const cls = EQUIPE_CLASS[equipe] || 't-gabriel';
+  return `<span class="team-tag ${cls}">${equipe}</span>`;
+}
+
+function renderAmbiente(amb, tab) {
+  const totalTarefas = amb.tarefas.length;
+  const concluidas = amb.tarefas.filter((_,i) => getStatus(tab, amb.id, i) === 'conc').length;
+
+  let tarefasHTML = amb.tarefas.map((t, i) => {
+    const st = getStatus(tab, amb.id, i);
+    const rowCls = st === 'conc' ? 'status-conc' : '';
+    const alertHTML = t.alerta ? `<span class="alert-tag">${t.alerta}</span>` : '';
+    return `
+    <div class="task-row ${rowCls}" id="row-${tab}-${amb.id}-${i}" onclick="clickTask('${tab}','${amb.id}',${i})">
+      <div class="task-left">
+        <div class="task-info">
+          <div class="task-name">${t.nome}</div>
+          <div class="task-meta">
+            ${teamTag(t.equipe)}
+            <span class="action-tag">${t.acao}</span>
+            ${alertHTML}
+          </div>
+        </div>
+      </div>
+      <button class="status-pill ${STATUS_CLASS[st]}" onclick="event.stopPropagation();clickTask('${tab}','${amb.id}',${i})">
+        ${STATUS_LABEL[st]}
+      </button>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="ambiente" id="amb-${tab}-${amb.id}">
+    <div class="amb-header ${amb.cor} open" onclick="toggleAmb('${tab}-${amb.id}',this)">
+      <span class="amb-icon">${amb.icon}</span>
+      <span class="amb-name">${amb.nome}</span>
+      <span class="amb-badge" id="badge-${tab}-${amb.id}">${concluidas}/${totalTarefas}</span>
+      <span class="amb-chevron">▼</span>
+    </div>
+    <div class="task-list open" id="tasks-${tab}-${amb.id}">
+      ${tarefasHTML}
+    </div>
+  </div>`;
+}
+
+function renderEtapas(tab) {
+  const rows = ETAPAS.map((e, i) => {
+    const st = getStatus(tab, 'etapas', i);
+    const rowCls = st === 'conc' ? 'status-conc' : '';
+    const respCls = EQUIPE_CLASS[e.resp] || 't-gabriel';
+    return `
+    <div class="etapa-row ${rowCls}" id="row-${tab}-etapas-${i}" onclick="clickTask('${tab}','etapas',${i})">
+      <span class="etapa-num">${e.num}</span>
+      <span class="etapa-nome">${e.nome}</span>
+      ${teamTag(e.resp)}
+      <span class="action-tag">${e.acao}</span>
+      <button class="status-pill ${STATUS_CLASS[st]}" onclick="event.stopPropagation();clickTask('${tab}','etapas',${i})" style="font-size:0.6rem;padding:2px 7px;">
+        ${STATUS_LABEL[st]}
+      </button>
+    </div>`;
+  }).join('');
+
+  const concluidas = ETAPAS.filter((_,i) => getStatus(tab,'etapas',i) === 'conc').length;
+  return `
+  <div class="ambiente" id="amb-${tab}-etapas">
+    <div class="amb-header c-etapas open" onclick="toggleAmb('${tab}-etapas',this)">
+      <span class="amb-icon">📅</span>
+      <span class="amb-name">Próximas etapas</span>
+      <span class="amb-badge" id="badge-${tab}-etapas">${concluidas}/${ETAPAS.length}</span>
+      <span class="amb-chevron">▼</span>
+    </div>
+    <div class="task-list open" id="tasks-${tab}-etapas">
+      ${rows}
+    </div>
+  </div>`;
+}
+
+function renderTab(tab) {
+  const container = document.getElementById(`main-${tab}`);
+  let html = '';
+  html += `<div class="section-label">Por Ambiente</div>`;
+  html += AMBIENTES.map(a => renderAmbiente(a, tab)).join('');
+  html += `<div class="section-label">Próximas Etapas</div>`;
+  html += renderEtapas(tab);
+  container.innerHTML = html;
+  updateCounters(tab);
+}
+
+function clickTask(tab, ambId, idx) {
+  const st = cycleStatus(tab, ambId, idx);
+  const row = document.getElementById(`row-${tab}-${ambId}-${idx}`);
+  if (!row) return;
+
+  // Update row class
+  row.className = 'task-row' + (st === 'conc' ? ' status-conc' : '');
+  if (row.classList.contains('etapa-row') || row.classList.contains('task-row')) {
+    // fix for etapa rows
+    if (ambId === 'etapas') {
+      row.className = 'etapa-row' + (st === 'conc' ? ' status-conc' : '');
+    }
+  }
+
+  // Update pill
+  const pill = row.querySelector('.status-pill');
+  if (pill) {
+    pill.className = `status-pill ${STATUS_CLASS[st]}`;
+    pill.textContent = STATUS_LABEL[st];
+  }
+
+  updateBadge(tab, ambId);
+  updateCounters(tab);
+}
+
+function updateBadge(tab, ambId) {
+  const badge = document.getElementById(`badge-${tab}-${ambId}`);
+  if (!ambId || !badge) return;
+  const items = ambId === 'etapas' ? ETAPAS : (AMBIENTES.find(a => a.id === ambId)?.tarefas || []);
+  const conc = items.filter((_,i) => getStatus(tab, ambId, i) === 'conc').length;
+  badge.textContent = `${conc}/${items.length}`;
+}
+
+function updateCounters(tab) {
+  const prefix = tab === 'manha' ? 'm' : 't';
+  const counts = { nao:0, inic:0, conc:0, verif:0 };
+  AMBIENTES.forEach(a => a.tarefas.forEach((_,i) => { counts[getStatus(tab,a.id,i)]++; }));
+  ETAPAS.forEach((_,i) => { counts[getStatus(tab,'etapas',i)]++; });
+  ['nao','inic','conc','verif'].forEach(s => {
+    const el = document.getElementById(`${prefix}-${s}`);
+    if (el) el.textContent = counts[s];
+  });
+}
+
+function toggleAmb(id, header) {
+  const list = document.getElementById(`tasks-${id}`);
+  if (!list) return;
+  list.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+function trocarTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+function atualizarHora() {
+  const agora = new Date();
+  const opts = { weekday:'long', day:'numeric', month:'long' };
+  document.getElementById('hoje').textContent = agora.toLocaleDateString('pt-BR', opts);
+  document.getElementById('hora').textContent = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// Init
+renderTab('manha');
+renderTab('tarde');
+atualizarHora();
+setInterval(atualizarHora, 30000);
+</script>
+</body>
+</html>
