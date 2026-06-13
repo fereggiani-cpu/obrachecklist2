@@ -344,9 +344,32 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+
+  /* ── LOADING ── */
+  #loading-screen {
+    position: fixed; inset: 0; background: #111214;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999; gap: 16px;
+  }
+  #loading-screen .spin {
+    width: 40px; height: 40px;
+    border: 3px solid #26272d;
+    border-top-color: #f5c842;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading-screen p { color: #787a85; font-size: 0.85rem; font-family: var(--mono); }
 </style>
 </head>
 <body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="spin"></div>
+  <p>Carregando checklist...</p>
+</div>
 
 <!-- TOP BAR -->
 <div class="topbar">
@@ -435,292 +458,347 @@
   <div class="main" id="main-tarde"></div>
 </div>
 
-<script>
-// ─── DATA ──────────────────────────────────────────────────────
-const AMBIENTES = [
-  {
-    id: 'lavanderia', nome: 'Lavanderia', icon: '🧺', cor: 'c-lavanderia',
-    tarefas: [
-      { nome: 'Instalação do tanque', equipe: 'Diney', acao: 'instalar', alerta: '📦 Aguardando entrega — confirmar data!' },
-      { nome: 'Instalação da porta', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-    ]
-  },
-  {
-    id: 'cozinha', nome: 'Cozinha', icon: '🍳', cor: 'c-cozinha',
-    tarefas: [
-      { nome: 'Móvel da pia (desmontagem do antigo)', equipe: 'Rene', acao: 'desmontar' },
-      { nome: 'Móvel da pia (montagem novo)', equipe: 'Romanza', acao: 'montagem', alerta: '⚠️ Só após retirada do antigo' },
-      { nome: 'Móvel do microondas', equipe: 'Romanza', acao: 'montagem' },
-      { nome: 'Porta da cozinha', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-      { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-      { nome: 'Azulejos (reposição)', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Verificar sobressalentes' },
-      { nome: 'Porta do armário (ajuste trilho)', equipe: 'Rene', acao: 'ajustar' },
-    ]
-  },
-  {
-    id: 'lavabo', nome: 'Lavabo', icon: '🚿', cor: 'c-lavabo',
-    tarefas: [
-      { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-      { nome: 'Pia', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Deve ser ANTES da torneira (Diney)' },
-      { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
-      { nome: 'Torneira', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após marmoreiro instalar pia' },
-      { nome: 'Marcenaria / Móvel', equipe: 'Romanza', acao: 'montagem' },
-      { nome: 'Rodapé (1 peça)', equipe: 'Staccato', acao: 'instalar' },
-    ]
-  },
-  {
-    id: 'sala', nome: 'Sala', icon: '🛋️', cor: 'c-sala',
-    tarefas: [
-      { nome: 'Rack TV', equipe: 'Romanza', acao: 'instalar' },
-      { nome: 'Estante sala', equipe: 'Romanza', acao: 'instalar' },
-      { nome: 'Luz — alterar comandos', equipe: 'Diney', acao: 'alterar' },
-      { nome: 'Ar condicionado — retirar do teto', equipe: 'Diney', acao: 'retirar' },
-      { nome: 'Ar condicionado — peça com defeito', equipe: 'Midea', acao: 'arrumar', alerta: '⚠️ Aguardando técnico Midea' },
-      { nome: 'Ar condicionado — reinstalar no teto', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após Midea arrumar a peça' },
-    ]
-  },
-  {
-    id: 'suite', nome: 'Suíte', icon: '🛏️', cor: 'c-suite',
-    tarefas: [
-      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
-      { nome: 'Cortina', equipe: 'Nanda', acao: 'comprar' },
-      { nome: 'Caixote do ar condicionado', equipe: 'Gabriel', acao: 'comprar' },
-    ]
-  },
-  {
-    id: 'suite-ban', nome: 'Banheiro Suíte', icon: '🛁', cor: 'c-suite-ban',
-    tarefas: [
-      { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
-      { nome: 'Box', equipe: 'Multiglass', acao: 'instalar', alerta: '🚨 Confirmar data' },
-      { nome: 'Torneira', equipe: 'Diney', acao: 'instalar' },
-      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
-      { nome: 'Toalheiro elétrico', equipe: 'Diney', acao: 'instalar' },
-      { nome: 'Soleira', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Confirmar data' },
-    ]
-  },
-  {
-    id: 'escritorio', nome: 'Escritório', icon: '💼', cor: 'c-escritorio',
-    tarefas: [
-      { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
-      { nome: 'Adesivar móveis', equipe: 'Nanda', acao: 'fechar' },
-      { nome: 'Escrivaninha', equipe: 'Gabriel', acao: 'comprar' },
-      { nome: 'Cadeira', equipe: 'Gabriel', acao: 'comprar' },
-    ]
-  },
-  {
-    id: 'quartinho', nome: 'Quartinho', icon: '📦', cor: 'c-quartinho',
-    tarefas: [
-      { nome: 'Porta do quartinho', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-      { nome: 'Estantes', equipe: 'Romanza', acao: 'montagem' },
-    ]
-  },
-  {
-    id: 'banheiro-servico', nome: 'Banheiro Serviço', icon: '🚽', cor: 'c-lavabo',
-    tarefas: [
-      { nome: 'Porta serviço', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
-      { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
-      { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
-    ]
-  },
-];
+<!-- Firebase SDKs (via CDN, sem precisar de npm) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-const ETAPAS = [
-  { num: '2ª', nome: 'Limpeza pós obra', resp: 'Gabriel', acao: 'cotar e fechar' },
-  { num: '2ª', nome: 'Organizer', resp: 'Nanda', acao: 'cotar e fechar' },
-  { num: '2ª', nome: 'Mudança', resp: 'Gabriel', acao: 'cotar e fechar' },
-  { num: '3ª', nome: 'Adesivos armários', resp: 'Nanda', acao: 'cotar e fechar' },
-  { num: '5ª', nome: 'Adesivos janelas', resp: 'Nanda', acao: 'cotar e fechar' },
-  { num: '6ª', nome: 'Cortinas', resp: 'Nanda', acao: 'cotar e fechar' },
-  { num: '7ª', nome: 'Varal', resp: 'Nanda', acao: 'cotar e fechar' },
-  { num: '8ª', nome: 'Espelho lavabo', resp: 'Pique', acao: 'cotar e fechar' },
-  { num: '9ª', nome: 'Porta toalha', resp: 'Pique', acao: 'cotar e fechar' },
-  { num: '10ª', nome: 'Porta papel higiênico', resp: 'Pique', acao: 'cotar e fechar' },
-  { num: '11ª', nome: 'Lixo cozinha', resp: 'Pique', acao: 'cotar e fechar' },
-  { num: '12ª', nome: 'Lixo banheiros', resp: 'Pique', acao: 'cotar e fechar' },
-  { num: '13ª', nome: 'Enxoval', resp: 'Pique', acao: 'cotar e fechar' },
-];
+  // ─── FIREBASE CONFIG ───────────────────────────────────────────
+  const firebaseConfig = {
+    apiKey: "AIzaSyBKSkseyHa4zSBNLKRJnEJW_FeONHwxqWk",
+    authDomain: "obra-checklist.firebaseapp.com",
+    databaseURL: "https://obra-checklist-default-rtdb.firebaseio.com",
+    projectId: "obra-checklist",
+    storageBucket: "obra-checklist.firebasestorage.app",
+    messagingSenderId: "255184039303",
+    appId: "1:255184039303:web:0ec58b88e819870dc2f722"
+  };
 
-const EQUIPE_CLASS = {
-  'Diney': 't-diney', 'Romanza': 't-romanza', 'Joao Batista': 't-joao',
-  'Marmore': 't-marmore', 'Nanda': 't-nanda', 'Gabriel': 't-gabriel',
-  'Midea': 't-midea', 'Multiglass': 't-multiglass', 'Staccato': 't-staccato',
-  'Pique': 't-pique', 'Rene': 't-rene'
-};
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
 
-const STATUS_CYCLE = ['nao', 'inic', 'conc', 'verif'];
-const STATUS_LABEL = { nao: '⬜ Não iniciado', inic: '🔵 Iniciado', conc: '✅ Concluído', verif: '🔍 A verificar' };
-const STATUS_CLASS = { nao: 's-nao', inic: 's-inic', conc: 's-conc', verif: 's-verif' };
+  // ─── DATA ──────────────────────────────────────────────────────
+  const AMBIENTES = [
+    {
+      id: 'lavanderia', nome: 'Lavanderia', icon: '🧺', cor: 'c-lavanderia',
+      tarefas: [
+        { nome: 'Instalação do tanque', equipe: 'Diney', acao: 'instalar', alerta: '📦 Aguardando entrega — confirmar data!' },
+        { nome: 'Instalação da porta', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+      ]
+    },
+    {
+      id: 'cozinha', nome: 'Cozinha', icon: '🍳', cor: 'c-cozinha',
+      tarefas: [
+        { nome: 'Móvel da pia (desmontagem do antigo)', equipe: 'Rene', acao: 'desmontar' },
+        { nome: 'Móvel da pia (montagem novo)', equipe: 'Romanza', acao: 'montagem', alerta: '⚠️ Só após retirada do antigo' },
+        { nome: 'Móvel do microondas', equipe: 'Romanza', acao: 'montagem' },
+        { nome: 'Porta da cozinha', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+        { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+        { nome: 'Azulejos (reposição)', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Verificar sobressalentes' },
+        { nome: 'Porta do armário (ajuste trilho)', equipe: 'Rene', acao: 'ajustar' },
+      ]
+    },
+    {
+      id: 'lavabo', nome: 'Lavabo', icon: '🚿', cor: 'c-lavabo',
+      tarefas: [
+        { nome: 'Soleiras', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+        { nome: 'Pia', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Deve ser ANTES da torneira (Diney)' },
+        { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
+        { nome: 'Torneira', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após marmoreiro instalar pia' },
+        { nome: 'Marcenaria / Móvel', equipe: 'Romanza', acao: 'montagem' },
+        { nome: 'Rodapé (1 peça)', equipe: 'Staccato', acao: 'instalar' },
+      ]
+    },
+    {
+      id: 'sala', nome: 'Sala', icon: '🛋️', cor: 'c-sala',
+      tarefas: [
+        { nome: 'Rack TV', equipe: 'Romanza', acao: 'instalar' },
+        { nome: 'Estante sala', equipe: 'Romanza', acao: 'instalar' },
+        { nome: 'Luz — alterar comandos', equipe: 'Diney', acao: 'alterar' },
+        { nome: 'Ar condicionado — retirar do teto', equipe: 'Diney', acao: 'retirar' },
+        { nome: 'Ar condicionado — peça com defeito', equipe: 'Midea', acao: 'arrumar', alerta: '⚠️ Aguardando técnico Midea' },
+        { nome: 'Ar condicionado — reinstalar no teto', equipe: 'Diney', acao: 'instalar', alerta: '⚠️ Só após Midea arrumar a peça' },
+      ]
+    },
+    {
+      id: 'suite', nome: 'Suíte', icon: '🛏️', cor: 'c-suite',
+      tarefas: [
+        { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+        { nome: 'Cortina', equipe: 'Nanda', acao: 'comprar' },
+        { nome: 'Caixote do ar condicionado', equipe: 'Gabriel', acao: 'comprar' },
+      ]
+    },
+    {
+      id: 'suite-ban', nome: 'Banheiro Suíte', icon: '🛁', cor: 'c-suite-ban',
+      tarefas: [
+        { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
+        { nome: 'Box', equipe: 'Multiglass', acao: 'instalar', alerta: '🚨 Confirmar data' },
+        { nome: 'Torneira', equipe: 'Diney', acao: 'instalar' },
+        { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+        { nome: 'Toalheiro elétrico', equipe: 'Diney', acao: 'instalar' },
+        { nome: 'Soleira', equipe: 'Marmore', acao: 'instalar', alerta: '🚨 Confirmar data' },
+      ]
+    },
+    {
+      id: 'escritorio', nome: 'Escritório', icon: '💼', cor: 'c-escritorio',
+      tarefas: [
+        { nome: 'Armário planejado', equipe: 'Romanza', acao: 'montagem', alerta: '🚨 Confirmar previsão de entrega' },
+        { nome: 'Adesivar móveis', equipe: 'Nanda', acao: 'fechar' },
+        { nome: 'Escrivaninha', equipe: 'Gabriel', acao: 'comprar' },
+        { nome: 'Cadeira', equipe: 'Gabriel', acao: 'comprar' },
+      ]
+    },
+    {
+      id: 'quartinho', nome: 'Quartinho', icon: '📦', cor: 'c-quartinho',
+      tarefas: [
+        { nome: 'Porta do quartinho', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+        { nome: 'Estantes', equipe: 'Romanza', acao: 'montagem' },
+      ]
+    },
+    {
+      id: 'banheiro-servico', nome: 'Banheiro Serviço', icon: '🚽', cor: 'c-lavabo',
+      tarefas: [
+        { nome: 'Porta serviço', equipe: 'Joao Batista', acao: 'instalar', alerta: '🚨 Sem data prevista' },
+        { nome: 'Privada', equipe: 'Diney', acao: 'instalar' },
+        { nome: 'Chuveiro', equipe: 'Diney', acao: 'instalar' },
+      ]
+    },
+  ];
 
-// State: tab -> ambId -> tarefaIdx -> status
-const state = {};
+  const ETAPAS = [
+    { num: '2ª', nome: 'Limpeza pós obra', resp: 'Gabriel', acao: 'cotar e fechar' },
+    { num: '2ª', nome: 'Organizer', resp: 'Nanda', acao: 'cotar e fechar' },
+    { num: '2ª', nome: 'Mudança', resp: 'Gabriel', acao: 'cotar e fechar' },
+    { num: '3ª', nome: 'Adesivos armários', resp: 'Nanda', acao: 'cotar e fechar' },
+    { num: '5ª', nome: 'Adesivos janelas', resp: 'Nanda', acao: 'cotar e fechar' },
+    { num: '6ª', nome: 'Cortinas', resp: 'Nanda', acao: 'cotar e fechar' },
+    { num: '7ª', nome: 'Varal', resp: 'Nanda', acao: 'cotar e fechar' },
+    { num: '8ª', nome: 'Espelho lavabo', resp: 'Pique', acao: 'cotar e fechar' },
+    { num: '9ª', nome: 'Porta toalha', resp: 'Pique', acao: 'cotar e fechar' },
+    { num: '10ª', nome: 'Porta papel higiênico', resp: 'Pique', acao: 'cotar e fechar' },
+    { num: '11ª', nome: 'Lixo cozinha', resp: 'Pique', acao: 'cotar e fechar' },
+    { num: '12ª', nome: 'Lixo banheiros', resp: 'Pique', acao: 'cotar e fechar' },
+    { num: '13ª', nome: 'Enxoval', resp: 'Pique', acao: 'cotar e fechar' },
+  ];
 
-function getKey(tab, ambId, idx) { return `${tab}__${ambId}__${idx}`; }
-function getStatus(tab, ambId, idx) { return state[getKey(tab,ambId,idx)] || 'nao'; }
-function cycleStatus(tab, ambId, idx) {
-  const cur = getStatus(tab, ambId, idx);
-  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur)+1) % STATUS_CYCLE.length];
-  state[getKey(tab,ambId,idx)] = next;
-  return next;
-}
+  const EQUIPE_CLASS = {
+    'Diney': 't-diney', 'Romanza': 't-romanza', 'Joao Batista': 't-joao',
+    'Marmore': 't-marmore', 'Nanda': 't-nanda', 'Gabriel': 't-gabriel',
+    'Midea': 't-midea', 'Multiglass': 't-multiglass', 'Staccato': 't-staccato',
+    'Pique': 't-pique', 'Rene': 't-rene'
+  };
 
-function teamTag(equipe) {
-  const cls = EQUIPE_CLASS[equipe] || 't-gabriel';
-  return `<span class="team-tag ${cls}">${equipe}</span>`;
-}
+  const STATUS_CYCLE = ['nao', 'inic', 'conc', 'verif'];
+  const STATUS_LABEL = { nao: '⬜ Não iniciado', inic: '🔵 Iniciado', conc: '✅ Concluído', verif: '🔍 A verificar' };
+  const STATUS_CLASS = { nao: 's-nao', inic: 's-inic', conc: 's-conc', verif: 's-verif' };
 
-function renderAmbiente(amb, tab) {
-  const totalTarefas = amb.tarefas.length;
-  const concluidas = amb.tarefas.filter((_,i) => getStatus(tab, amb.id, i) === 'conc').length;
+  // ─── STATE (carregado do Firebase) ─────────────────────────────
+  let state = {};
+  let fbLoaded = false;
 
-  let tarefasHTML = amb.tarefas.map((t, i) => {
-    const st = getStatus(tab, amb.id, i);
-    const rowCls = st === 'conc' ? 'status-conc' : '';
-    const alertHTML = t.alerta ? `<span class="alert-tag">${t.alerta}</span>` : '';
-    return `
-    <div class="task-row ${rowCls}" id="row-${tab}-${amb.id}-${i}" onclick="clickTask('${tab}','${amb.id}',${i})">
-      <div class="task-left">
-        <div class="task-info">
-          <div class="task-name">${t.nome}</div>
-          <div class="task-meta">
-            ${teamTag(t.equipe)}
-            <span class="action-tag">${t.acao}</span>
-            ${alertHTML}
+  // ─── FIREBASE: escuta mudanças em tempo real ────────────────────
+  const stateRef = ref(db, 'status');
+  onValue(stateRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) state = data;
+    if (!fbLoaded) {
+      fbLoaded = true;
+      renderTab('manha');
+      renderTab('tarde');
+      hideLoading();
+    } else {
+      // Atualiza visual sem re-renderizar tudo
+      refreshAllPills();
+    }
+  });
+
+  function hideLoading() {
+    const el = document.getElementById("loading-screen");
+    if (el) el.style.display = "none";
+  }
+
+  function saveToFirebase(key, value) {
+    set(ref(db, `status/${key}`), value);
+  }
+
+  // ─── HELPERS ───────────────────────────────────────────────────
+  function getKey(tab, ambId, idx) { return `${tab}__${ambId}__${idx}`; }
+  function getStatus(tab, ambId, idx) { return state[getKey(tab,ambId,idx)] || 'nao'; }
+
+  function cycleStatus(tab, ambId, idx) {
+    const key = getKey(tab, ambId, idx);
+    const cur = state[key] || 'nao';
+    const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur)+1) % STATUS_CYCLE.length];
+    state[key] = next;
+    saveToFirebase(key, next);
+    return next;
+  }
+
+  function teamTag(equipe) {
+    const cls = EQUIPE_CLASS[equipe] || 't-gabriel';
+    return `<span class="team-tag ${cls}">${equipe}</span>`;
+  }
+
+  // ─── RENDER ────────────────────────────────────────────────────
+  function renderAmbiente(amb, tab) {
+    const concluidas = amb.tarefas.filter((_,i) => getStatus(tab, amb.id, i) === 'conc').length;
+    const tarefasHTML = amb.tarefas.map((t, i) => {
+      const st = getStatus(tab, amb.id, i);
+      const rowCls = st === 'conc' ? 'status-conc' : '';
+      const alertHTML = t.alerta ? `<span class="alert-tag">${t.alerta}</span>` : '';
+      return `
+      <div class="task-row ${rowCls}" id="row-${tab}-${amb.id}-${i}" onclick="clickTask('${tab}','${amb.id}',${i})">
+        <div class="task-left">
+          <div class="task-info">
+            <div class="task-name">${t.nome}</div>
+            <div class="task-meta">
+              ${teamTag(t.equipe)}
+              <span class="action-tag">${t.acao}</span>
+              ${alertHTML}
+            </div>
           </div>
         </div>
-      </div>
-      <button class="status-pill ${STATUS_CLASS[st]}" onclick="event.stopPropagation();clickTask('${tab}','${amb.id}',${i})">
-        ${STATUS_LABEL[st]}
-      </button>
-    </div>`;
-  }).join('');
+        <button class="status-pill ${STATUS_CLASS[st]}" id="pill-${tab}-${amb.id}-${i}" onclick="event.stopPropagation();clickTask('${tab}','${amb.id}',${i})">
+          ${STATUS_LABEL[st]}
+        </button>
+      </div>`;
+    }).join('');
 
-  return `
-  <div class="ambiente" id="amb-${tab}-${amb.id}">
-    <div class="amb-header ${amb.cor} open" onclick="toggleAmb('${tab}-${amb.id}',this)">
-      <span class="amb-icon">${amb.icon}</span>
-      <span class="amb-name">${amb.nome}</span>
-      <span class="amb-badge" id="badge-${tab}-${amb.id}">${concluidas}/${totalTarefas}</span>
-      <span class="amb-chevron">▼</span>
-    </div>
-    <div class="task-list open" id="tasks-${tab}-${amb.id}">
-      ${tarefasHTML}
-    </div>
-  </div>`;
-}
-
-function renderEtapas(tab) {
-  const rows = ETAPAS.map((e, i) => {
-    const st = getStatus(tab, 'etapas', i);
-    const rowCls = st === 'conc' ? 'status-conc' : '';
-    const respCls = EQUIPE_CLASS[e.resp] || 't-gabriel';
     return `
-    <div class="etapa-row ${rowCls}" id="row-${tab}-etapas-${i}" onclick="clickTask('${tab}','etapas',${i})">
-      <span class="etapa-num">${e.num}</span>
-      <span class="etapa-nome">${e.nome}</span>
-      ${teamTag(e.resp)}
-      <span class="action-tag">${e.acao}</span>
-      <button class="status-pill ${STATUS_CLASS[st]}" onclick="event.stopPropagation();clickTask('${tab}','etapas',${i})" style="font-size:0.6rem;padding:2px 7px;">
-        ${STATUS_LABEL[st]}
-      </button>
+    <div class="ambiente" id="amb-${tab}-${amb.id}">
+      <div class="amb-header ${amb.cor} open" onclick="toggleAmb('${tab}-${amb.id}',this)">
+        <span class="amb-icon">${amb.icon}</span>
+        <span class="amb-name">${amb.nome}</span>
+        <span class="amb-badge" id="badge-${tab}-${amb.id}">${concluidas}/${amb.tarefas.length}</span>
+        <span class="amb-chevron">▼</span>
+      </div>
+      <div class="task-list open" id="tasks-${tab}-${amb.id}">
+        ${tarefasHTML}
+      </div>
     </div>`;
-  }).join('');
-
-  const concluidas = ETAPAS.filter((_,i) => getStatus(tab,'etapas',i) === 'conc').length;
-  return `
-  <div class="ambiente" id="amb-${tab}-etapas">
-    <div class="amb-header c-etapas open" onclick="toggleAmb('${tab}-etapas',this)">
-      <span class="amb-icon">📅</span>
-      <span class="amb-name">Próximas etapas</span>
-      <span class="amb-badge" id="badge-${tab}-etapas">${concluidas}/${ETAPAS.length}</span>
-      <span class="amb-chevron">▼</span>
-    </div>
-    <div class="task-list open" id="tasks-${tab}-etapas">
-      ${rows}
-    </div>
-  </div>`;
-}
-
-function renderTab(tab) {
-  const container = document.getElementById(`main-${tab}`);
-  let html = '';
-  html += `<div class="section-label">Por Ambiente</div>`;
-  html += AMBIENTES.map(a => renderAmbiente(a, tab)).join('');
-  html += `<div class="section-label">Próximas Etapas</div>`;
-  html += renderEtapas(tab);
-  container.innerHTML = html;
-  updateCounters(tab);
-}
-
-function clickTask(tab, ambId, idx) {
-  const st = cycleStatus(tab, ambId, idx);
-  const row = document.getElementById(`row-${tab}-${ambId}-${idx}`);
-  if (!row) return;
-
-  // Update row class
-  row.className = 'task-row' + (st === 'conc' ? ' status-conc' : '');
-  if (row.classList.contains('etapa-row') || row.classList.contains('task-row')) {
-    // fix for etapa rows
-    if (ambId === 'etapas') {
-      row.className = 'etapa-row' + (st === 'conc' ? ' status-conc' : '');
-    }
   }
 
-  // Update pill
-  const pill = row.querySelector('.status-pill');
-  if (pill) {
-    pill.className = `status-pill ${STATUS_CLASS[st]}`;
-    pill.textContent = STATUS_LABEL[st];
+  function renderEtapas(tab) {
+    const concluidas = ETAPAS.filter((_,i) => getStatus(tab,'etapas',i) === 'conc').length;
+    const rows = ETAPAS.map((e, i) => {
+      const st = getStatus(tab, 'etapas', i);
+      const rowCls = st === 'conc' ? 'status-conc' : '';
+      return `
+      <div class="etapa-row ${rowCls}" id="row-${tab}-etapas-${i}" onclick="clickTask('${tab}','etapas',${i})">
+        <span class="etapa-num">${e.num}</span>
+        <span class="etapa-nome">${e.nome}</span>
+        ${teamTag(e.resp)}
+        <span class="action-tag">${e.acao}</span>
+        <button class="status-pill ${STATUS_CLASS[st]}" id="pill-${tab}-etapas-${i}" onclick="event.stopPropagation();clickTask('${tab}','etapas',${i})" style="font-size:0.6rem;padding:2px 7px;">
+          ${STATUS_LABEL[st]}
+        </button>
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="ambiente" id="amb-${tab}-etapas">
+      <div class="amb-header c-etapas open" onclick="toggleAmb('${tab}-etapas',this)">
+        <span class="amb-icon">📅</span>
+        <span class="amb-name">Próximas etapas</span>
+        <span class="amb-badge" id="badge-${tab}-etapas">${concluidas}/${ETAPAS.length}</span>
+        <span class="amb-chevron">▼</span>
+      </div>
+      <div class="task-list open" id="tasks-${tab}-etapas">
+        ${rows}
+      </div>
+    </div>`;
   }
 
-  updateBadge(tab, ambId);
-  updateCounters(tab);
-}
+  function renderTab(tab) {
+    const container = document.getElementById(`main-${tab}`);
+    let html = '<div class="section-label">Por Ambiente</div>';
+    html += AMBIENTES.map(a => renderAmbiente(a, tab)).join('');
+    html += '<div class="section-label">Próximas Etapas</div>';
+    html += renderEtapas(tab);
+    container.innerHTML = html;
+    updateCounters(tab);
+  }
 
-function updateBadge(tab, ambId) {
-  const badge = document.getElementById(`badge-${tab}-${ambId}`);
-  if (!ambId || !badge) return;
-  const items = ambId === 'etapas' ? ETAPAS : (AMBIENTES.find(a => a.id === ambId)?.tarefas || []);
-  const conc = items.filter((_,i) => getStatus(tab, ambId, i) === 'conc').length;
-  badge.textContent = `${conc}/${items.length}`;
-}
+  // Atualiza pills sem re-renderizar tudo (para sync em tempo real)
+  function refreshAllPills() {
+    ['manha','tarde'].forEach(tab => {
+      AMBIENTES.forEach(amb => {
+        amb.tarefas.forEach((_, i) => {
+          const st = getStatus(tab, amb.id, i);
+          const row  = document.getElementById(`row-${tab}-${amb.id}-${i}`);
+          const pill = document.getElementById(`pill-${tab}-${amb.id}-${i}`);
+          if (row)  { row.className = 'task-row' + (st==='conc'?' status-conc':''); }
+          if (pill) { pill.className = `status-pill ${STATUS_CLASS[st]}`; pill.textContent = STATUS_LABEL[st]; }
+        });
+        updateBadge(tab, amb.id);
+      });
+      ETAPAS.forEach((_, i) => {
+        const st   = getStatus(tab, 'etapas', i);
+        const row  = document.getElementById(`row-${tab}-etapas-${i}`);
+        const pill = document.getElementById(`pill-${tab}-etapas-${i}`);
+        if (row)  { row.className = 'etapa-row' + (st==='conc'?' status-conc':''); }
+        if (pill) { pill.className = `status-pill ${STATUS_CLASS[st]}`; pill.textContent = STATUS_LABEL[st]; }
+      });
+      updateBadge(tab, 'etapas');
+      updateCounters(tab);
+    });
+  }
 
-function updateCounters(tab) {
-  const prefix = tab === 'manha' ? 'm' : 't';
-  const counts = { nao:0, inic:0, conc:0, verif:0 };
-  AMBIENTES.forEach(a => a.tarefas.forEach((_,i) => { counts[getStatus(tab,a.id,i)]++; }));
-  ETAPAS.forEach((_,i) => { counts[getStatus(tab,'etapas',i)]++; });
-  ['nao','inic','conc','verif'].forEach(s => {
-    const el = document.getElementById(`${prefix}-${s}`);
-    if (el) el.textContent = counts[s];
-  });
-}
+  // ─── INTERACTIONS ──────────────────────────────────────────────
+  window.clickTask = function(tab, ambId, idx) {
+    const st   = cycleStatus(tab, ambId, idx);
+    const row  = document.getElementById(`row-${tab}-${ambId}-${idx}`);
+    const pill = document.getElementById(`pill-${tab}-${ambId}-${idx}`);
+    if (!row) return;
+    row.className = (ambId === 'etapas' ? 'etapa-row' : 'task-row') + (st==='conc'?' status-conc':'');
+    if (pill) { pill.className = `status-pill ${STATUS_CLASS[st]}`; pill.textContent = STATUS_LABEL[st]; }
+    updateBadge(tab, ambId);
+    updateCounters(tab);
+  };
 
-function toggleAmb(id, header) {
-  const list = document.getElementById(`tasks-${id}`);
-  if (!list) return;
-  list.classList.toggle('open');
-  header.classList.toggle('open');
-}
+  window.toggleAmb = function(id, header) {
+    const list = document.getElementById(`tasks-${id}`);
+    if (!list) return;
+    list.classList.toggle('open');
+    header.classList.toggle('open');
+  };
 
-function trocarTab(tab, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById(`panel-${tab}`).classList.add('active');
-}
+  window.trocarTab = function(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(`panel-${tab}`).classList.add('active');
+  };
 
-function atualizarHora() {
-  const agora = new Date();
-  const opts = { weekday:'long', day:'numeric', month:'long' };
-  document.getElementById('hoje').textContent = agora.toLocaleDateString('pt-BR', opts);
-  document.getElementById('hora').textContent = agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-}
+  function updateBadge(tab, ambId) {
+    const badge = document.getElementById(`badge-${tab}-${ambId}`);
+    if (!badge) return;
+    const items = ambId === 'etapas' ? ETAPAS : (AMBIENTES.find(a => a.id === ambId)?.tarefas || []);
+    const conc = items.filter((_,i) => getStatus(tab, ambId, i) === 'conc').length;
+    badge.textContent = `${conc}/${items.length}`;
+  }
 
-// Init
-renderTab('manha');
-renderTab('tarde');
-atualizarHora();
-setInterval(atualizarHora, 30000);
+  function updateCounters(tab) {
+    const prefix = tab === 'manha' ? 'm' : 't';
+    const counts = { nao:0, inic:0, conc:0, verif:0 };
+    AMBIENTES.forEach(a => a.tarefas.forEach((_,i) => { counts[getStatus(tab,a.id,i)]++; }));
+    ETAPAS.forEach((_,i) => { counts[getStatus(tab,'etapas',i)]++; });
+    ['nao','inic','conc','verif'].forEach(s => {
+      const el = document.getElementById(`${prefix}-${s}`);
+      if (el) el.textContent = counts[s];
+    });
+  }
+
+  // ─── CLOCK ─────────────────────────────────────────────────────
+  function atualizarHora() {
+    const agora = new Date();
+    const el1 = document.getElementById('hoje');
+    const el2 = document.getElementById('hora');
+    if (el1) el1.textContent = agora.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+    if (el2) el2.textContent = agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  }
+  atualizarHora();
+  setInterval(atualizarHora, 30000);
 </script>
 </body>
 </html>
